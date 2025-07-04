@@ -43,6 +43,12 @@ def datetime_handler(obj: any) -> Optional[str]:
     """Handle datetime serialization for JSON."""
     if hasattr(obj, 'isoformat'):
         return obj.isoformat()
+    # Handle property objects that can't be serialized
+    if isinstance(obj, property):
+        return None  # Skip property descriptors
+    # Handle other common non-serializable types
+    if hasattr(obj, '__dict__') and not hasattr(obj, '__class__'):
+        return str(obj)  # Convert to string for unknown objects
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 def should_cleanup_task(created_at: str, ttl_seconds: int = 3600) -> bool:

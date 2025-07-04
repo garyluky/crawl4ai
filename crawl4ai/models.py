@@ -254,7 +254,13 @@ class CrawlResult(BaseModel):
         """
         result = super().model_dump(*args, **kwargs)
         if self._markdown is not None:
-            result["markdown"] = self._markdown.model_dump() 
+            result["markdown"] = self._markdown.model_dump()
+        
+        # Remove deprecated property descriptors that cause JSON serialization errors
+        deprecated_properties = ["markdown_v2", "fit_markdown", "fit_html"]
+        for prop in deprecated_properties:
+            result.pop(prop, None)
+        
         return result
 
 class StringCompatibleMarkdown(str):

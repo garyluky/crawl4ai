@@ -624,8 +624,10 @@ class AsyncWebCrawler:
             cleaned_html = fast_format_html(cleaned_html)
 
         # Return complete crawl result
+        # Use redirected_url if available, otherwise use original url
+        final_url = kwargs.get('redirected_url', url) if kwargs.get('redirected_url') else url
         return CrawlResult(
-            url=url,
+            url=final_url,
             html=html,
             fit_html=fit_html,
             cleaned_html=cleaned_html,

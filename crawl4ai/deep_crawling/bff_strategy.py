@@ -171,8 +171,23 @@ class BestFirstCrawlingStrategy(DeepCrawlStrategy):
             stream_gen = await crawler.arun_many(urls=urls, config=batch_config)
             async for result in stream_gen:
                 result_url = result.url
-                # Find the corresponding tuple from the batch.
-                corresponding = next((item for item in batch if item[2] == result_url), None)
+                # Find the corresponding tuple from the batch using exact URL matching first
+                corresponding = None
+                
+                # First try exact match with result.url
+                corresponding = next((item for item in batch if item[2] == result.url), None)
+                
+                # If not found, try normalized matching
+                if not corresponding:
+                    result_normalized = normalize_url_for_deep_crawl(result.url, result.url)
+                    corresponding = next((item for item in batch if normalize_url_for_deep_crawl(item[2], item[2]) == result_normalized), None)
+                
+                # If still not found and we have a redirected URL, try that
+                if not corresponding and result.redirected_url and result.redirected_url != result.url:
+                    corresponding = next((item for item in batch if item[2] == result.redirected_url), None)
+                    if not corresponding:
+                        redirected_normalized = normalize_url_for_deep_crawl(result.redirected_url, result.redirected_url)
+                        corresponding = next((item for item in batch if normalize_url_for_deep_crawl(item[2], item[2]) == redirected_normalized), None)
                 if not corresponding:
                     continue
                 score, depth, url, parent_url = corresponding
@@ -191,7 +206,7 @@ class BestFirstCrawlingStrategy(DeepCrawlStrategy):
                 if result.success:
                     # Discover new links from this result
                     new_links: List[Tuple[str, Optional[str]]] = []
-                    await self.link_discovery(result, result_url, depth, visited, new_links, depths)
+                    await self.link_discovery(result, result.redirected_url or result_url, depth, visited, new_links, depths)
                     
                     for new_url, new_parent in new_links:
                         new_depth = depths.get(new_url, depth + 1)

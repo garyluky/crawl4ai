@@ -153,6 +153,10 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
         # current_level holds tuples: (url, parent_url)
         current_level: List[Tuple[str, Optional[str]]] = [(start_url, None)]
         depths: Dict[str, int] = {start_url: 0}
+        
+        # Add normalized start_url to visited set to prevent re-crawling
+        normalized_start_url = normalize_url_for_deep_crawl(start_url, start_url)
+        visited.add(normalized_start_url)
 
         results: List[CrawlResult] = []
 
@@ -169,18 +173,37 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
             self._pages_crawled += len(successful_results)
             
             for result in batch_results:
-                url = result.url
-                depth = depths.get(url, 0)
+                # Find the original requested URL that corresponds to this result
+                original_url = None
+                for requested_url, _ in current_level:
+                    if requested_url == result.url:
+                        original_url = requested_url
+                        break
+                    # Also check if result.url is a normalized version of requested_url
+                    if normalize_url_for_deep_crawl(requested_url, requested_url) == normalize_url_for_deep_crawl(result.url, result.url):
+                        original_url = requested_url
+                        break
+                
+                # Use original_url for depth lookup, fallback to result.url if not found
+                lookup_url = original_url if original_url else result.url
+                depth = depths.get(lookup_url, 0)
                 result.metadata = result.metadata or {}
                 result.metadata["depth"] = depth
-                parent_url = next((parent for (u, parent) in current_level if u == url), None)
+                
+                # Find parent URL using original requested URL
+                parent_url = None
+                if original_url:
+                    parent_url = next((parent for (u, parent) in current_level if u == original_url), None)
+                
                 result.metadata["parent_url"] = parent_url
                 results.append(result)
                 
                 # Only discover links from successful crawls
                 if result.success:
                     # Link discovery will handle the max pages limit internally
-                    await self.link_discovery(result, url, depth, visited, next_level, depths)
+                    # Use the actual crawled URL for link discovery
+                    source_url = result.url
+                    await self.link_discovery(result, source_url, depth, visited, next_level, depths)
 
             current_level = next_level
 
@@ -199,11 +222,18 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
         visited: Set[str] = set()
         current_level: List[Tuple[str, Optional[str]]] = [(start_url, None)]
         depths: Dict[str, int] = {start_url: 0}
+        
+        # Add normalized start_url to visited set to prevent re-crawling
+        normalized_start_url = normalize_url_for_deep_crawl(start_url, start_url)
+        visited.add(normalized_start_url)
 
         while current_level and not self._cancel_event.is_set():
             next_level: List[Tuple[str, Optional[str]]] = []
             urls = [url for url, _ in current_level]
-            visited.update(urls)
+            # Add normalized URLs to visited set to prevent infinite loops
+            for url in urls:
+                normalized_url = normalize_url_for_deep_crawl(url, url)
+                visited.add(normalized_url)
 
             stream_config = config.clone(deep_crawl_strategy=None, stream=True)
             stream_gen = await crawler.arun_many(urls=urls, config=stream_config)
@@ -211,11 +241,28 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
             # Keep track of processed results for this batch
             results_count = 0
             async for result in stream_gen:
-                url = result.url
-                depth = depths.get(url, 0)
+                # Find the original requested URL that corresponds to this result
+                original_url = None
+                for requested_url, _ in current_level:
+                    if requested_url == result.url:
+                        original_url = requested_url
+                        break
+                    # Also check if result.url is a normalized version of requested_url
+                    if normalize_url_for_deep_crawl(requested_url, requested_url) == normalize_url_for_deep_crawl(result.url, result.url):
+                        original_url = requested_url
+                        break
+                
+                # Use original_url for depth lookup, fallback to result.url if not found
+                lookup_url = original_url if original_url else result.url
+                depth = depths.get(lookup_url, 0)
                 result.metadata = result.metadata or {}
                 result.metadata["depth"] = depth
-                parent_url = next((parent for (u, parent) in current_level if u == url), None)
+                
+                # Find parent URL using original requested URL
+                parent_url = None
+                if original_url:
+                    parent_url = next((parent for (u, parent) in current_level if u == original_url), None)
+                
                 result.metadata["parent_url"] = parent_url
                 
                 # Count only successful crawls
@@ -228,7 +275,9 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 # Only discover links from successful crawls
                 if result.success:
                     # Link discovery will handle the max pages limit internally
-                    await self.link_discovery(result, url, depth, visited, next_level, depths)
+                    # Use the actual crawled URL for link discovery
+                    source_url = result.url
+                    await self.link_discovery(result, source_url, depth, visited, next_level, depths)
             
             # If we didn't get results back (e.g. due to errors), avoid getting stuck in an infinite loop
             # by considering these URLs as visited but not counting them toward the max_pages limit
