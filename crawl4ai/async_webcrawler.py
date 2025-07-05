@@ -237,6 +237,11 @@ class AsyncWebCrawler:
             await self.start()
 
         config = config or CrawlerRunConfig()
+        
+        # Handle session_id from kwargs (used by dispatcher for session isolation)
+        if 'session_id' in kwargs and kwargs['session_id']:
+            config.session_id = kwargs['session_id']
+        
         if not isinstance(url, str) or not url:
             raise ValueError(
                 "Invalid URL, make sure the URL is a non-empty string")
