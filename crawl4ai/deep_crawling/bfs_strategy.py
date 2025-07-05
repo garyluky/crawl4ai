@@ -184,6 +184,22 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 # Debug: Log navigation and content characteristics to identify contamination
                 if result and result.success:
                     content_preview = result.markdown.raw_markdown[:1000] if result.markdown and result.markdown.raw_markdown else "No content"
+                    
+                    # Extract HTML title and key identifiers to detect homepage vs target page
+                    html_title = ""
+                    html_h1 = ""
+                    if result.html:
+                        try:
+                            from bs4 import BeautifulSoup
+                            soup = BeautifulSoup(result.html, 'html.parser')
+                            title_tag = soup.find('title')
+                            html_title = title_tag.get_text(strip=True) if title_tag else "No title"
+                            h1_tag = soup.find('h1')
+                            html_h1 = h1_tag.get_text(strip=True) if h1_tag else "No h1"
+                        except:
+                            html_title = "Parse error"
+                            html_h1 = "Parse error"
+                    
                     logger.info(f"Deep crawl result for {url}:")
                     logger.info(f"  Requested URL: {url}")
                     logger.info(f"  Final URL: {result.url}")
@@ -192,6 +208,8 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                     logger.info(f"  HTML length: {len(result.html) if result.html else 0}")
                     logger.info(f"  Cleaned HTML length: {len(result.cleaned_html) if result.cleaned_html else 0}")
                     logger.info(f"  Markdown length: {len(result.markdown.raw_markdown if result.markdown else 0)}")
+                    logger.info(f"  HTML Title: '{html_title}'")
+                    logger.info(f"  HTML H1: '{html_h1}'")
                     logger.info(f"  Content preview: {content_preview[:200]}...")
                 else:
                     logger.error(f"Deep crawl FAILED for {url}: success={getattr(result, 'success', 'None')}, error={getattr(result, 'error_message', 'None')}")
@@ -282,6 +300,22 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 # Debug: Log navigation and content characteristics to identify contamination
                 if result and result.success:
                     content_preview = result.markdown.raw_markdown[:1000] if result.markdown and result.markdown.raw_markdown else "No content"
+                    
+                    # Extract HTML title and key identifiers to detect homepage vs target page
+                    html_title = ""
+                    html_h1 = ""
+                    if result.html:
+                        try:
+                            from bs4 import BeautifulSoup
+                            soup = BeautifulSoup(result.html, 'html.parser')
+                            title_tag = soup.find('title')
+                            html_title = title_tag.get_text(strip=True) if title_tag else "No title"
+                            h1_tag = soup.find('h1')
+                            html_h1 = h1_tag.get_text(strip=True) if h1_tag else "No h1"
+                        except:
+                            html_title = "Parse error"
+                            html_h1 = "Parse error"
+                    
                     logger.info(f"Deep crawl STREAM result for {url}:")
                     logger.info(f"  Requested URL: {url}")
                     logger.info(f"  Final URL: {result.url}")
@@ -290,6 +324,8 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                     logger.info(f"  HTML length: {len(result.html) if result.html else 0}")
                     logger.info(f"  Cleaned HTML length: {len(result.cleaned_html) if result.cleaned_html else 0}")
                     logger.info(f"  Markdown length: {len(result.markdown.raw_markdown if result.markdown else 0)}")
+                    logger.info(f"  HTML Title: '{html_title}'")
+                    logger.info(f"  HTML H1: '{html_h1}'")
                     logger.info(f"  Content preview: {content_preview[:200]}...")
                 else:
                     logger.error(f"Deep crawl STREAM FAILED for {url}: success={getattr(result, 'success', 'None')}, error={getattr(result, 'error_message', 'None')}")
