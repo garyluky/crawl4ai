@@ -183,8 +183,10 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 
                 # Debug: Log content characteristics to identify contamination
                 if result and result.success:
-                    content_preview = result.markdown.raw_markdown[:200] if result.markdown and result.markdown.raw_markdown else "No content"
-                    logger.info(f"Deep crawl result for {url}: {len(content_preview)} chars, preview: {content_preview[:100]}...")
+                    content_preview = result.markdown.raw_markdown[:1000] if result.markdown and result.markdown.raw_markdown else "No content"
+                    logger.info(f"Deep crawl result for {url}: {len(result.markdown.raw_markdown if result.markdown else 0)} total chars, preview: {content_preview[:300]}...")
+                    logger.info(f"Deep crawl HTML length for {url}: {len(result.html) if result.html else 0} chars")
+                    logger.info(f"Deep crawl cleaned HTML length for {url}: {len(result.cleaned_html) if result.cleaned_html else 0} chars")
                 batch_results.append(result)
             
             # Update pages crawled counter - count only successful crawls
@@ -271,8 +273,10 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 
                 # Debug: Log content characteristics to identify contamination
                 if result and result.success:
-                    content_preview = result.markdown.raw_markdown[:200] if result.markdown and result.markdown.raw_markdown else "No content"
-                    logger.info(f"Deep crawl STREAM result for {url}: {len(content_preview)} chars, preview: {content_preview[:100]}...")
+                    content_preview = result.markdown.raw_markdown[:1000] if result.markdown and result.markdown.raw_markdown else "No content"
+                    logger.info(f"Deep crawl STREAM result for {url}: {len(result.markdown.raw_markdown if result.markdown else 0)} total chars, preview: {content_preview[:300]}...")
+                    logger.info(f"Deep crawl STREAM HTML length for {url}: {len(result.html) if result.html else 0} chars")
+                    logger.info(f"Deep crawl STREAM cleaned HTML length for {url}: {len(result.cleaned_html) if result.cleaned_html else 0} chars")
                 # Find the original requested URL that corresponds to this result
                 original_url = None
                 for requested_url, _ in current_level:

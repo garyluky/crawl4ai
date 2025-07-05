@@ -959,8 +959,17 @@ class BrowserManager:
         """
         self._cleanup_expired_sessions()
 
+        # IMPORTANT: Skip session reuse for deep crawling to ensure complete isolation
+        # Deep crawl session IDs start with "deep_crawl_" or are UUIDs from BFS strategy
+        is_deep_crawl = (crawlerRunConfig.session_id and 
+                        (crawlerRunConfig.session_id.startswith("deep_crawl_") or 
+                         len(crawlerRunConfig.session_id) == 36))  # UUID length
+        
         # If a session_id is provided and we already have it, reuse that page + context
-        if crawlerRunConfig.session_id and crawlerRunConfig.session_id in self.sessions:
+        # BUT skip reuse for deep crawling to ensure isolation
+        if (crawlerRunConfig.session_id and 
+            crawlerRunConfig.session_id in self.sessions and 
+            not is_deep_crawl):
             context, page, _ = self.sessions[crawlerRunConfig.session_id]
             # Update last-used timestamp
             self.sessions[crawlerRunConfig.session_id] = (context, page, time.time())
@@ -994,7 +1003,8 @@ class BrowserManager:
             page = await context.new_page()
 
         # If a session_id is specified, store this session so we can reuse later
-        if crawlerRunConfig.session_id:
+        # BUT skip storing deep crawl sessions to ensure complete isolation
+        if crawlerRunConfig.session_id and not is_deep_crawl:
             self.sessions[crawlerRunConfig.session_id] = (context, page, time.time())
 
         return page, context
