@@ -13,6 +13,8 @@ from ..types import AsyncWebCrawler, CrawlerRunConfig, CrawlResult
 from ..utils import normalize_url_for_deep_crawl, efficient_normalize_url_for_deep_crawl
 from math import inf as infinity
 
+logger = logging.getLogger(__name__)
+
 class BFSDeepCrawlStrategy(DeepCrawlStrategy):
     """
     Breadth-First Search deep crawling strategy.
