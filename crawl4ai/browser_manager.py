@@ -906,6 +906,9 @@ class BrowserManager:
         Converts the crawlerRunConfig into a dict, excludes ephemeral fields,
         then returns a hash of the sorted JSON. This yields a stable signature
         that identifies configurations requiring a unique browser context.
+        
+        NOTE: session_id is included in the signature when provided to ensure
+        session isolation even in non-managed browser mode.
         """
         import json
 
@@ -913,7 +916,7 @@ class BrowserManager:
         # Exclude items that do not affect browser-level setup.
         # Expand or adjust as needed, e.g. chunking_strategy is purely for data extraction, not for browser config.
         ephemeral_keys = [
-            "session_id",
+            # "session_id", # REMOVED: session_id now included for session isolation
             "js_code",
             "scraping_strategy",
             "extraction_strategy",
@@ -930,6 +933,13 @@ class BrowserManager:
         for key in ephemeral_keys:
             if key in config_dict:
                 del config_dict[key]
+                
+        # IMPORTANT: Keep session_id in the signature when provided to ensure session isolation
+        # This prevents browser context sharing between different sessions in deep crawl
+        if not crawlerRunConfig.session_id:
+            # Only exclude session_id if it's None/empty to maintain backward compatibility
+            config_dict.pop("session_id", None)
+            
         # Convert to canonical JSON string
         signature_json = json.dumps(config_dict, sort_keys=True, default=str)
 
@@ -956,13 +966,16 @@ class BrowserManager:
             self.sessions[crawlerRunConfig.session_id] = (context, page, time.time())
             return page, context
 
-        # If using a managed browser, just grab the shared default_context
+        # If using a managed browser, create new context for sessions to avoid contamination
         if self.config.use_managed_browser:
-            context = self.default_context
-            pages = context.pages
-            page = next((p for p in pages if p.url == crawlerRunConfig.url), None)
-            if not page:
-                page = context.pages[0] # await context.new_page()
+            if crawlerRunConfig.session_id:
+                # For sessions, create a new context to avoid contamination
+                context = await self.create_browser_context(crawlerRunConfig)
+                await self.setup_context(context, crawlerRunConfig)
+            else:
+                # For non-session requests, use default context
+                context = self.default_context
+            page = await context.new_page()
         else:
             # Otherwise, check if we have an existing context for this config
             config_signature = self._make_config_signature(crawlerRunConfig)

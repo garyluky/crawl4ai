@@ -36,7 +36,13 @@ class DFSDeepCrawlStrategy(BFSDeepCrawlStrategy):
 
             # Clone config to disable recursive deep crawling.
             batch_config = config.clone(deep_crawl_strategy=None, stream=False)
-            url_results = await crawler.arun_many(urls=[url], config=batch_config)
+            
+            # Use arun instead of arun_many to ensure session isolation
+            # This prevents browser context contamination between URLs
+            import uuid
+            url_config = batch_config.clone(session_id=str(uuid.uuid4()))
+            result = await crawler.arun(url, config=url_config)
+            url_results = [result]
             
             for result in url_results:
                 result.metadata = result.metadata or {}
@@ -80,23 +86,27 @@ class DFSDeepCrawlStrategy(BFSDeepCrawlStrategy):
                 continue
             visited.add(url)
 
-            stream_config = config.clone(deep_crawl_strategy=None, stream=True)
-            stream_gen = await crawler.arun_many(urls=[url], config=stream_config)
-            async for result in stream_gen:
-                result.metadata = result.metadata or {}
-                result.metadata["depth"] = depth
-                result.metadata["parent_url"] = parent
-                if self.url_scorer:
-                    result.metadata["score"] = self.url_scorer.score(url)
-                yield result
+            stream_config = config.clone(deep_crawl_strategy=None, stream=False)
+            
+            # Use arun instead of arun_many to ensure session isolation
+            # This prevents browser context contamination between URLs
+            import uuid
+            url_config = stream_config.clone(session_id=str(uuid.uuid4()))
+            result = await crawler.arun(url, config=url_config)
+            result.metadata = result.metadata or {}
+            result.metadata["depth"] = depth
+            result.metadata["parent_url"] = parent
+            if self.url_scorer:
+                result.metadata["score"] = self.url_scorer.score(url)
+            yield result
 
-                # Only count successful crawls toward max_pages limit
-                # and only discover links from successful crawls
-                if result.success:
-                    self._pages_crawled += 1
-                    
-                    new_links: List[Tuple[str, Optional[str]]] = []
-                    await self.link_discovery(result, url, depth, visited, new_links, depths)
-                    for new_url, new_parent in reversed(new_links):
-                        new_depth = depths.get(new_url, depth + 1)
-                        stack.append((new_url, new_parent, new_depth))
+            # Only count successful crawls toward max_pages limit
+            # and only discover links from successful crawls
+            if result.success:
+                self._pages_crawled += 1
+                
+                new_links: List[Tuple[str, Optional[str]]] = []
+                await self.link_discovery(result, url, depth, visited, new_links, depths)
+                for new_url, new_parent in reversed(new_links):
+                    new_depth = depths.get(new_url, depth + 1)
+                    stack.append((new_url, new_parent, new_depth))

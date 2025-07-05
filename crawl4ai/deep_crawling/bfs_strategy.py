@@ -166,7 +166,16 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
 
             # Clone the config to disable deep crawling recursion and enforce batch mode.
             batch_config = config.clone(deep_crawl_strategy=None, stream=False)
-            batch_results = await crawler.arun_many(urls=urls, config=batch_config)
+            
+            # Use sequential arun calls instead of arun_many to ensure session isolation
+            # This prevents browser context contamination between URLs
+            batch_results = []
+            for url in urls:
+                # Create unique session ID for each URL to prevent context contamination
+                import uuid
+                url_config = batch_config.clone(session_id=str(uuid.uuid4()))
+                result = await crawler.arun(url, config=url_config)
+                batch_results.append(result)
             
             # Update pages crawled counter - count only successful crawls
             successful_results = [r for r in batch_results if r.success]
@@ -235,12 +244,17 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 normalized_url = normalize_url_for_deep_crawl(url, url)
                 visited.add(normalized_url)
 
-            stream_config = config.clone(deep_crawl_strategy=None, stream=True)
-            stream_gen = await crawler.arun_many(urls=urls, config=stream_config)
+            stream_config = config.clone(deep_crawl_strategy=None, stream=False)
             
+            # Use sequential arun calls instead of arun_many to ensure session isolation
+            # This prevents browser context contamination between URLs
             # Keep track of processed results for this batch
             results_count = 0
-            async for result in stream_gen:
+            for url in urls:
+                # Create unique session ID for each URL to prevent context contamination
+                import uuid
+                url_config = stream_config.clone(session_id=str(uuid.uuid4()))
+                result = await crawler.arun(url, config=url_config)
                 # Find the original requested URL that corresponds to this result
                 original_url = None
                 for requested_url, _ in current_level:
