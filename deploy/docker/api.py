@@ -420,6 +420,15 @@ async def handle_crawl_request(
         # crawler: AsyncWebCrawler = AsyncWebCrawler(config=browser_config)
         # await crawler.start()
         
+        # IMPORTANT: Ensure session isolation for deep crawl requests
+        # If deep crawl is enabled but no session_id is provided, generate one
+        if (hasattr(crawler_config, 'deep_crawl_strategy') and 
+            crawler_config.deep_crawl_strategy is not None and 
+            (not hasattr(crawler_config, 'session_id') or not crawler_config.session_id)):
+            import uuid
+            crawler_config.session_id = f"deep_crawl_{uuid.uuid4().hex[:12]}"
+            logger.info(f"Generated session ID for deep crawl: {crawler_config.session_id}")
+        
         base_config = config["crawler"]["base_config"]
         # Iterate on key-value pairs in global_config then use haseattr to set them 
         for key, value in base_config.items():
