@@ -180,6 +180,11 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 url_config = batch_config.clone(session_id=session_id)
                 logger.info(f"Deep crawl processing URL: {url} with session_id: {session_id}")
                 result = await crawler.arun(url, config=url_config)
+                
+                # Debug: Log content characteristics to identify contamination
+                if result and result.success:
+                    content_preview = result.markdown.raw_markdown[:200] if result.markdown and result.markdown.raw_markdown else "No content"
+                    logger.info(f"Deep crawl result for {url}: {len(content_preview)} chars, preview: {content_preview[:100]}...")
                 batch_results.append(result)
             
             # Update pages crawled counter - count only successful crawls
@@ -263,6 +268,11 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 url_config = stream_config.clone(session_id=session_id)
                 logger.info(f"Deep crawl STREAM processing URL: {url} with session_id: {session_id}")
                 result = await crawler.arun(url, config=url_config)
+                
+                # Debug: Log content characteristics to identify contamination
+                if result and result.success:
+                    content_preview = result.markdown.raw_markdown[:200] if result.markdown and result.markdown.raw_markdown else "No content"
+                    logger.info(f"Deep crawl STREAM result for {url}: {len(content_preview)} chars, preview: {content_preview[:100]}...")
                 # Find the original requested URL that corresponds to this result
                 original_url = None
                 for requested_url, _ in current_level:
