@@ -181,12 +181,20 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 logger.info(f"Deep crawl processing URL: {url} with session_id: {session_id}")
                 result = await crawler.arun(url, config=url_config)
                 
-                # Debug: Log content characteristics to identify contamination
+                # Debug: Log navigation and content characteristics to identify contamination
                 if result and result.success:
                     content_preview = result.markdown.raw_markdown[:1000] if result.markdown and result.markdown.raw_markdown else "No content"
-                    logger.info(f"Deep crawl result for {url}: {len(result.markdown.raw_markdown if result.markdown else 0)} total chars, preview: {content_preview[:300]}...")
-                    logger.info(f"Deep crawl HTML length for {url}: {len(result.html) if result.html else 0} chars")
-                    logger.info(f"Deep crawl cleaned HTML length for {url}: {len(result.cleaned_html) if result.cleaned_html else 0} chars")
+                    logger.info(f"Deep crawl result for {url}:")
+                    logger.info(f"  Requested URL: {url}")
+                    logger.info(f"  Final URL: {result.url}")
+                    logger.info(f"  Redirected URL: {getattr(result, 'redirected_url', 'None')}")
+                    logger.info(f"  Status code: {getattr(result, 'status_code', 'None')}")
+                    logger.info(f"  HTML length: {len(result.html) if result.html else 0}")
+                    logger.info(f"  Cleaned HTML length: {len(result.cleaned_html) if result.cleaned_html else 0}")
+                    logger.info(f"  Markdown length: {len(result.markdown.raw_markdown if result.markdown else 0)}")
+                    logger.info(f"  Content preview: {content_preview[:200]}...")
+                else:
+                    logger.error(f"Deep crawl FAILED for {url}: success={getattr(result, 'success', 'None')}, error={getattr(result, 'error_message', 'None')}")
                 batch_results.append(result)
             
             # Update pages crawled counter - count only successful crawls
@@ -271,12 +279,20 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 logger.info(f"Deep crawl STREAM processing URL: {url} with session_id: {session_id}")
                 result = await crawler.arun(url, config=url_config)
                 
-                # Debug: Log content characteristics to identify contamination
+                # Debug: Log navigation and content characteristics to identify contamination
                 if result and result.success:
                     content_preview = result.markdown.raw_markdown[:1000] if result.markdown and result.markdown.raw_markdown else "No content"
-                    logger.info(f"Deep crawl STREAM result for {url}: {len(result.markdown.raw_markdown if result.markdown else 0)} total chars, preview: {content_preview[:300]}...")
-                    logger.info(f"Deep crawl STREAM HTML length for {url}: {len(result.html) if result.html else 0} chars")
-                    logger.info(f"Deep crawl STREAM cleaned HTML length for {url}: {len(result.cleaned_html) if result.cleaned_html else 0} chars")
+                    logger.info(f"Deep crawl STREAM result for {url}:")
+                    logger.info(f"  Requested URL: {url}")
+                    logger.info(f"  Final URL: {result.url}")
+                    logger.info(f"  Redirected URL: {getattr(result, 'redirected_url', 'None')}")
+                    logger.info(f"  Status code: {getattr(result, 'status_code', 'None')}")
+                    logger.info(f"  HTML length: {len(result.html) if result.html else 0}")
+                    logger.info(f"  Cleaned HTML length: {len(result.cleaned_html) if result.cleaned_html else 0}")
+                    logger.info(f"  Markdown length: {len(result.markdown.raw_markdown if result.markdown else 0)}")
+                    logger.info(f"  Content preview: {content_preview[:200]}...")
+                else:
+                    logger.error(f"Deep crawl STREAM FAILED for {url}: success={getattr(result, 'success', 'None')}, error={getattr(result, 'error_message', 'None')}")
                 # Find the original requested URL that corresponds to this result
                 original_url = None
                 for requested_url, _ in current_level:
