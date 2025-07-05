@@ -149,6 +149,7 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
         Batch (non-streaming) mode:
         Processes one BFS level at a time, then yields all the results.
         """
+        logger.info(f"BFS _arun_batch started for URL: {start_url}")
         visited: Set[str] = set()
         # current_level holds tuples: (url, parent_url)
         current_level: List[Tuple[str, Optional[str]]] = [(start_url, None)]
@@ -230,6 +231,7 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
         Streaming mode:
         Processes one BFS level at a time and yields results immediately as they arrive.
         """
+        logger.info(f"BFS _arun_stream started for URL: {start_url}")
         visited: Set[str] = set()
         current_level: List[Tuple[str, Optional[str]]] = [(start_url, None)]
         depths: Dict[str, int] = {start_url: 0}
