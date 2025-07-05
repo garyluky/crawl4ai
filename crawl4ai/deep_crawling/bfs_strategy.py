@@ -255,7 +255,9 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
             for url in urls:
                 # Create unique session ID for each URL to prevent context contamination
                 import uuid
-                url_config = stream_config.clone(session_id=str(uuid.uuid4()))
+                session_id = str(uuid.uuid4())
+                url_config = stream_config.clone(session_id=session_id)
+                logger.info(f"Deep crawl STREAM processing URL: {url} with session_id: {session_id}")
                 result = await crawler.arun(url, config=url_config)
                 # Find the original requested URL that corresponds to this result
                 original_url = None
