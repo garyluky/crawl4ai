@@ -965,6 +965,10 @@ class BrowserManager:
                         (crawlerRunConfig.session_id.startswith("deep_crawl_") or 
                          len(crawlerRunConfig.session_id) == 36))  # UUID length
         
+        # Debug logging for session management
+        if crawlerRunConfig.session_id and self.logger:
+            self.logger.info(f"Session management: session_id={crawlerRunConfig.session_id}, is_deep_crawl={is_deep_crawl}, in_sessions={crawlerRunConfig.session_id in self.sessions}")
+        
         # If a session_id is provided and we already have it, reuse that page + context
         # BUT skip reuse for deep crawling to ensure isolation
         if (crawlerRunConfig.session_id and 
@@ -973,12 +977,16 @@ class BrowserManager:
             context, page, _ = self.sessions[crawlerRunConfig.session_id]
             # Update last-used timestamp
             self.sessions[crawlerRunConfig.session_id] = (context, page, time.time())
+            if self.logger:
+                self.logger.info(f"REUSING session context for session_id={crawlerRunConfig.session_id}")
             return page, context
 
         # IMPORTANT: Always create new context for session-based requests to ensure isolation
         if crawlerRunConfig.session_id:
             # For sessions, ALWAYS create a new context to avoid contamination
             # This ensures complete isolation between different session IDs
+            if self.logger:
+                self.logger.info(f"CREATING NEW context for session_id={crawlerRunConfig.session_id}, is_deep_crawl={is_deep_crawl}")
             context = await self.create_browser_context(crawlerRunConfig)
             await self.setup_context(context, crawlerRunConfig)
             page = await context.new_page()
@@ -1005,7 +1013,12 @@ class BrowserManager:
         # If a session_id is specified, store this session so we can reuse later
         # BUT skip storing deep crawl sessions to ensure complete isolation
         if crawlerRunConfig.session_id and not is_deep_crawl:
+            if self.logger:
+                self.logger.info(f"STORING session for reuse: session_id={crawlerRunConfig.session_id}")
             self.sessions[crawlerRunConfig.session_id] = (context, page, time.time())
+        elif crawlerRunConfig.session_id and is_deep_crawl:
+            if self.logger:
+                self.logger.info(f"SKIPPING session storage for deep crawl: session_id={crawlerRunConfig.session_id}")
 
         return page, context
 

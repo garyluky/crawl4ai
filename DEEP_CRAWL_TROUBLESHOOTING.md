@@ -84,33 +84,46 @@ deep_crawl_strategy: {
 **Fix**: Added detailed URL navigation logging (requested vs final vs redirected URLs)
 **Status**: COMPLETED - Navigation is working correctly, all URLs reach their targets
 
-### 7. HTML Content Analysis 🚧 IN PROGRESS
+### 7. HTML Content Analysis ⚠️ INTERMITTENT ISSUE IDENTIFIED!
 **Problem**: Despite correct navigation, identical HTML content is being returned for different URLs
 **Fix**: Added HTML title and H1 tag extraction to identify if pages are serving homepage content
-**Status**: Recently deployed, awaiting test results
+**Status**: ⚠️ ISSUE IS INTERMITTENT - Content contamination varies between runs!
 
-## BREAKTHROUGH: Root Cause Identified! 🎯
+**FIRST RUN RESULTS:**
+- `what-is-your-concern/`: ✅ FIXED - 840 words with proper title "What Is Your Concern? – thalia"
+- `dermapen/`: ✅ FIXED - 380 words with proper title "DERMAPEN – thalia"  
+- `anti-wrinkle-treatments/`: ❌ 153 words (homepage content)
+- `dermal-fillers/`: ❌ 153 words (homepage content)
 
-**Navigation is working perfectly** - All URLs navigate correctly:
-- what-is-your-concern: Requested → Final → Redirected (all correct URLs)
-- dermapen: Requested → Final → Redirected (all correct URLs)  
-- Status codes: All 200 (success)
+**SECOND RUN RESULTS - PATTERN REVERSED:**
+- `what-is-your-concern/`: ❌ 153 words (homepage content) - NOW BROKEN
+- `dermapen/`: ❌ 153 words (homepage content) - NOW BROKEN
+- `anti-wrinkle-treatments/`: ✅ FIXED - 2046 words with proper title "ANTI-WRINKLE TREATMENTS – thalia"  
+- `dermal-fillers/`: ✅ FIXED - 1915 words with proper title "DERMAL FILLERS – thalia"
 
-**The issue is in MARKDOWN GENERATION** - Despite different HTML content:
-- what-is-your-concern: 68993 HTML → 4567 cleaned → 2866 markdown
-- dermapen: 68993 HTML → 4567 cleaned → 2854 markdown (IDENTICAL sizes!)
-- BUT all markdown starts with identical navigation content
+**KEY INSIGHT**: The issue is RANDOM/INTERMITTENT - different URLs get contaminated on different runs!
 
-**Key Finding**: The content previews show ALL pages (even working ones) start with:
-```
-[](https://thalia-aesthetics.com/)
-© 2024 thalia-aesthetics 
-  * [Home](https://thalia-aesthetics.com/)
-  * [What Is Your Concern?](https://thalia-aesthetics.com/what-is-your-concern/)
-  * [Treatments...
-```
+### 8. Session Management Deep Debug 🚧 IN PROGRESS
+**Problem**: Intermittent content contamination suggests race condition or session reuse despite isolation
+**Fix**: Added extensive debug logging to track session creation, reuse, and storage
+**Status**: Recently deployed, awaiting test results to identify session management issues
 
-**Root Cause**: The markdown generation is prioritizing navigation/sidebar content over main page content. The website's structure has a prominent navigation sidebar that's being extracted as the primary content.
+## BREAKTHROUGH: Intermittent Session Contamination Identified! ⚠️
+
+**Previous Diagnosis Was Incomplete** - The original HTML/markdown generation theory was partially correct but missed the intermittent nature.
+
+**Current Understanding:**
+1. **Navigation Works Perfectly**: All URLs navigate correctly to their target pages
+2. **Session Isolation Logic Exists**: Deep crawl sessions should be isolated via UUID detection
+3. **Intermittent Contamination**: Different URLs randomly receive homepage content on different runs
+4. **Race Condition Suspected**: Session management may have timing issues
+
+**Evidence of Intermittent Nature:**
+- Run 1: `what-is-your-concern` and `dermapen` worked correctly 
+- Run 2: `what-is-your-concern` and `dermapen` failed, but `anti-wrinkle-treatments` and `dermal-fillers` worked correctly
+- The randomness suggests session context bleeding between concurrent requests
+
+**Key Insight**: This is NOT a markdown generation issue - it's a browser context isolation issue that manifests intermittently, likely due to race conditions in session management during concurrent deep crawl requests.
 
 ## Git Branch Status
 
