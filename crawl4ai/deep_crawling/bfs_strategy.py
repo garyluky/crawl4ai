@@ -181,6 +181,15 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 logger.info(f"Deep crawl processing URL: {url} with session_id: {session_id}")
                 result = await crawler.arun(url, config=url_config)
                 
+                # CRITICAL: Force cleanup of browser context after each URL to prevent contamination
+                # This ensures complete isolation between concurrent deep crawl requests
+                try:
+                    if hasattr(crawler, 'browser_manager') and crawler.browser_manager:
+                        await crawler.browser_manager.kill_session(session_id)
+                        logger.info(f"Deep crawl: CLEANED UP session {session_id} for {url}")
+                except Exception as e:
+                    logger.warning(f"Deep crawl: Failed to cleanup session {session_id}: {e}")
+                
                 # Debug: Log navigation and content characteristics to identify contamination
                 if result and result.success:
                     content_preview = result.markdown.raw_markdown[:1000] if result.markdown and result.markdown.raw_markdown else "No content"
@@ -296,6 +305,15 @@ class BFSDeepCrawlStrategy(DeepCrawlStrategy):
                 url_config = stream_config.clone(session_id=session_id)
                 logger.info(f"Deep crawl STREAM processing URL: {url} with session_id: {session_id}")
                 result = await crawler.arun(url, config=url_config)
+                
+                # CRITICAL: Force cleanup of browser context after each URL to prevent contamination
+                # This ensures complete isolation between concurrent deep crawl requests
+                try:
+                    if hasattr(crawler, 'browser_manager') and crawler.browser_manager:
+                        await crawler.browser_manager.kill_session(session_id)
+                        logger.info(f"Deep crawl STREAM: CLEANED UP session {session_id} for {url}")
+                except Exception as e:
+                    logger.warning(f"Deep crawl STREAM: Failed to cleanup session {session_id}: {e}")
                 
                 # Debug: Log navigation and content characteristics to identify contamination
                 if result and result.success:
