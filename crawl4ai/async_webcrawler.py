@@ -241,6 +241,12 @@ class AsyncWebCrawler:
         # Handle session_id from kwargs (used by dispatcher for session isolation)
         if 'session_id' in kwargs and kwargs['session_id']:
             config.session_id = kwargs['session_id']
+            
+        # Log session isolation info for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        if hasattr(config, 'session_id') and config.session_id:
+            logger.info(f"arun processing URL: {url} with session_id: {config.session_id}")
         
         if not isinstance(url, str) or not url:
             raise ValueError(
