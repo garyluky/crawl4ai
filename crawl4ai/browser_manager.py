@@ -966,18 +966,19 @@ class BrowserManager:
             self.sessions[crawlerRunConfig.session_id] = (context, page, time.time())
             return page, context
 
-        # If using a managed browser, create new context for sessions to avoid contamination
-        if self.config.use_managed_browser:
-            if crawlerRunConfig.session_id:
-                # For sessions, create a new context to avoid contamination
-                context = await self.create_browser_context(crawlerRunConfig)
-                await self.setup_context(context, crawlerRunConfig)
-            else:
-                # For non-session requests, use default context
-                context = self.default_context
+        # IMPORTANT: Always create new context for session-based requests to ensure isolation
+        if crawlerRunConfig.session_id:
+            # For sessions, ALWAYS create a new context to avoid contamination
+            # This ensures complete isolation between different session IDs
+            context = await self.create_browser_context(crawlerRunConfig)
+            await self.setup_context(context, crawlerRunConfig)
+            page = await context.new_page()
+        elif self.config.use_managed_browser:
+            # For non-session requests with managed browser, use default context
+            context = self.default_context
             page = await context.new_page()
         else:
-            # Otherwise, check if we have an existing context for this config
+            # For non-session requests without managed browser, use config signature
             config_signature = self._make_config_signature(crawlerRunConfig)
 
             async with self._contexts_lock:
